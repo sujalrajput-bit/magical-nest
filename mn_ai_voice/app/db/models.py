@@ -4,10 +4,10 @@ Defines SQLAlchemy models used for call tracking, event logging,
 and lead qualification snapshots.
 """
 
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import Column, String, DateTime, Boolean, JSON, Integer, ForeignKey
-from datetime import datetime
-
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy ORM models."""
@@ -22,7 +22,7 @@ class Call(Base):
     from_phone = Column(String)
     status = Column(String)
     current_state = Column(String)
-    started_at = Column(DateTime, default=datetime.utcnow)   
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     ended_at = Column(DateTime, nullable=True)
     source = Column(String)
 
@@ -36,7 +36,7 @@ class Event(Base):
     call_id = Column(String, ForeignKey("calls.call_id"))
     type = Column(String)
     payload = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class LeadSnapshot(Base):
@@ -55,4 +55,8 @@ class LeadSnapshot(Base):
     email = Column(String, nullable=True)
     qualification_status = Column(String, default="unknown")
     qualification_reasons = Column(JSON, default=list)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )

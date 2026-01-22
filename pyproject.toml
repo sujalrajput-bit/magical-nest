@@ -29,3 +29,21 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[tool.mypy]
+python_version = "3.12"
+install_types = true
+non_interactive = true
+
+[[tool.mypy.overrides]]
+module = [
+    "yaml.*",
+    "yaml"
+]
+follow_imports = "silent"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "types-pyyaml>=6.0.12.20250915",
+]
