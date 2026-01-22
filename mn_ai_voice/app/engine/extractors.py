@@ -24,11 +24,11 @@ class LanguageExtractor:
         """
         t = text.lower()
 
-        if any(word in t for word in ["hindi", "हिंदी"]):
-            return "hindi"
-
         if any(word in t for word in ["hinglish", "mix"]):
             return "hinglish"
+
+        if any(word in t for word in ["hindi", "हिंदी"]):
+            return "hindi"
 
         if any(word in t for word in ["english", "eng"]):
             return "english"
@@ -40,9 +40,12 @@ class RegionExtractor:
     """Detect serviceable region from city/state mentions."""
 
     SOUTH_INDIA_STATES = {
-        "karnataka", "ka", "tamil nadu", "tn", "telangana", "tg", "andhra", "ap", "kerala", "kl"
+        "karnataka", "tamil nadu", "telangana", "andhra", "kerala",
+        "ka", "tn", "tg", "ap", "kl",
     }
+
     MAHARASHTRA = {"maharashtra", "mh", "pune", "mumbai", "nagpur"}
+
     DELHI_NCR = {
         "delhi", "ncr", "gurgaon", "gurugram", "noida", "ghaziabad"
     }
@@ -59,16 +62,27 @@ class RegionExtractor:
         """
         t = text.lower()
 
-        if any(k in t for k in self.SOUTH_INDIA_STATES):
+        if self._contains_any(self.SOUTH_INDIA_STATES, t):
             return "south_india"
 
-        if any(k in t for k in self.MAHARASHTRA):
+        if self._contains_any(self.MAHARASHTRA, t):
             return "maharashtra"
 
-        if any(k in t for k in self.DELHI_NCR):
+        if self._contains_any(self.DELHI_NCR, t):
             return "delhi_ncr"
 
         return "unknown"
+
+    @staticmethod
+    def _contains_any(tokens: set[str], text: str) -> bool:
+        """
+        Check if any token exists in text using word boundaries
+        to avoid false positives (e.g., 'ka' inside 'bank').
+        """
+        return any(
+            re.search(rf"\b{re.escape(token)}\b", text)
+            for token in tokens
+        )
 
 
 class BudgetExtractor:
@@ -92,8 +106,10 @@ class BudgetExtractor:
 
         if value < 6:
             return "below_6L"
+
         if 6 <= value <= 9:
             return "6_to_9L"
+
         return "above_9L"
 
 
@@ -108,7 +124,8 @@ class TimelineExtractor:
             text: User input text to analyze for timeline preferences.
 
         Returns:
-            Timeline bucket: "immediate", "1_month", "2_3_months", "3_plus", or "unknown".
+            Timeline bucket: "immediate", "1_month",
+            "2_3_months", "3_plus", or "unknown".
         """
         t = text.lower()
 
