@@ -2,12 +2,12 @@
 Acceptance tests for FAQ interrupt behavior.
 
 Ensures that FAQ questions do not mutate
-the active conversation state.
+the active conversation state or snapshot.
 """
 
 from mn_ai_voice.app.orchestrator.call_orchestrator import CallOrchestrator
 from mn_ai_voice.app.core.constants import CallState
-from mn_ai_voice.app.db.models import Call, LeadSnapshot
+from mn_ai_voice.app.db.models import Call, Lead, LeadSnapshot
 
 
 class DummySession:
@@ -20,40 +20,41 @@ class DummySession:
         self.events = []
 
     def add(self, obj):
-        """
-        Add an object to the events list for testing purposes.
-
-        Args:
-            obj: Object to add to the events collection.
-        """
+        """Add an object to the events list."""
         self.events.append(obj)
 
     def commit(self):
-        """
-        No-op commit method for testing purposes.
+        """Commit the session (no-op for testing)."""
 
-        This method does nothing since DummySession doesn't perform
-        actual database operations.
-        """
 
-def test_faq_interrupt_does_not_change_state():
+def test_faq_interrupt_does_not_change_state_or_snapshot():
     """
     During ASK_BUDGET, user asks an FAQ.
-    → FAQ answer returned
-    → Call state remains ASK_BUDGET
+
+    Expected:
+    - FAQ answer is returned
+    - Call state remains ASK_BUDGET
+    - Lead snapshot is not mutated
     """
 
     orchestrator = CallOrchestrator()
     db = DummySession()
 
+    # --- Identity setup (REQUIRED now) ---
+    lead = Lead(
+        lead_id="l_test",
+        primary_phone="+911234567890",
+    )
+
+    snapshot = LeadSnapshot(lead_id=lead.lead_id)
+
     call = Call(
         call_id="c_test",
+        lead_id=lead.lead_id,
         from_phone="+911234567890",
         status="in_progress",
         current_state=CallState.ASK_BUDGET.value,
     )
-
-    snapshot = LeadSnapshot(call_id="c_test")
 
     user_text = "What is your process?"
 
@@ -64,9 +65,16 @@ def test_faq_interrupt_does_not_change_state():
         text=user_text,
     )
 
-    # Assert FAQ answer returned
+    # --- Assertions ---
+
+    # FAQ answer returned
     assert reply is not None
     assert "process" in reply.lower()
 
-    # Assert state unchanged
+    # State unchanged
     assert call.current_state == CallState.ASK_BUDGET.value
+
+    # Snapshot untouched
+    assert snapshot.qualification_status in (None, "unknown")
+    assert snapshot.timeline_bucket in (None, "unknown")
+    assert snapshot.room_size_text in (None, "")

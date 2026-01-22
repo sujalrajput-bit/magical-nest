@@ -1,7 +1,8 @@
-"""Qualification skill logic.
+"""
+Qualification skill logic.
 
 Applies extraction and qualification rules to update a lead snapshot
-based on the current conversation state and user input.
+based on user input, independent of strict conversation order.
 """
 
 from typing import Any
@@ -20,23 +21,31 @@ class QualificationSkill:
         self.qualifier = QualificationService()
 
     def apply(self, state: CallState, text: str, snapshot: Any) -> Any:
-        """Apply qualification-related logic based on the current call state.
-
-        Args:
-            state: Current conversation state.
-            text: Raw user input text.
-            snapshot: Mutable lead snapshot object to update.
-
-        Returns:
-            The updated lead snapshot.
         """
-        if state == CallState.ASK_BUDGET:
-            snapshot.budget_band = self.budget_extractor.extract(text)
+        Apply qualification-related logic based on user input.
 
+        - Extract budget whenever mentioned
+        - Extract email only when explicitly asked
+        - Evaluate qualification once sufficient data exists
+        """
+
+        # --- Budget extraction (can happen anytime) ---
+        budget_band = self.budget_extractor.extract(text)
+        if budget_band != "unknown":
+            snapshot.budget_band = budget_band
+
+        # --- Email extraction (only when asked) ---
         if state == CallState.ASK_EMAIL:
-            snapshot.email = self.email_extractor.extract(text)
+            email = self.email_extractor.extract(text)
+            if email:
+                snapshot.email = email
 
-        if state == CallState.QUALIFY:
+        # --- Qualification evaluation (run once when ready) ---
+        if (
+            snapshot.qualification_status in (None, "unknown")
+            and snapshot.region_value not in (None, "unknown")
+            and snapshot.budget_band not in (None, "unknown")
+        ):
             status, reasons = self.qualifier.evaluate(
                 snapshot.region_value,
                 snapshot.budget_band,

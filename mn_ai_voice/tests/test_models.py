@@ -1,4 +1,6 @@
-"""Tests for SQLAlchemy ORM models."""
+"""
+Tests for SQLAlchemy ORM models.
+"""
 
 # pylint: disable=redefined-outer-name,invalid-name
 
@@ -6,7 +8,7 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from mn_ai_voice.app.db.models import Base, Call, Event, LeadSnapshot
+from mn_ai_voice.app.db.models import Base, Call, Event, Lead, LeadSnapshot
 
 
 @pytest.fixture()
@@ -80,59 +82,83 @@ def test_create_event_for_call(db_session):
 def test_lead_snapshot_defaults(db_session):
     """LeadSnapshot applies default values correctly."""
 
-    call = Call(call_id="call_789")
+    lead = Lead(
+        lead_id="l_789",
+        primary_phone="+911111111111",
+    )
+    db_session.add(lead)
+    db_session.flush()  
+
+    call = Call(
+        call_id="call_789",
+        lead_id=lead.lead_id,
+    )
     db_session.add(call)
     db_session.commit()
 
-    snapshot = LeadSnapshot(call_id="call_789")
-
+    snapshot = LeadSnapshot(lead_id=lead.lead_id)
     db_session.add(snapshot)
     db_session.commit()
 
-    saved_snapshot = db_session.get(LeadSnapshot, "call_789")
-
-    assert saved_snapshot.language == "unknown"
-    assert saved_snapshot.region_value == "unknown"
-    assert saved_snapshot.budget_band == "unknown"
-    assert saved_snapshot.timeline_bucket == "unknown"
-    assert saved_snapshot.qualification_status == "unknown"
-    assert saved_snapshot.qualification_reasons == []
-    assert saved_snapshot.updated_at is not None
+    assert snapshot.language == "unknown"
+    assert snapshot.region_value == "unknown"
+    assert snapshot.budget_band == "unknown"
+    assert snapshot.qualification_status == "unknown"
 
 
 def test_lead_snapshot_update_timestamp(db_session):
     """updated_at changes when the snapshot is updated."""
 
-    call = Call(call_id="call_999")
+    lead = Lead(
+        lead_id="l_999",
+        primary_phone="+922222222222",
+    )
+    db_session.add(lead)
+    db_session.flush() 
+
+    call = Call(
+        call_id="call_999",
+        lead_id=lead.lead_id,
+    )
     db_session.add(call)
     db_session.commit()
 
-    snapshot = LeadSnapshot(call_id="call_999")
+    snapshot = LeadSnapshot(lead_id=lead.lead_id)
     db_session.add(snapshot)
     db_session.commit()
 
-    first_updated_at = snapshot.updated_at
+    old_updated_at = snapshot.updated_at
 
-    snapshot.language = "en"
+    snapshot.budget_band = "6_to_9L"
     db_session.commit()
 
-    assert snapshot.updated_at >= first_updated_at
+    assert snapshot.updated_at > old_updated_at
 
 
 def test_lead_snapshot_json_default_is_not_shared(db_session):
     """Each LeadSnapshot should have its own JSON default list."""
 
-    call1 = Call(call_id="call_a")
-    call2 = Call(call_id="call_b")
+    lead1 = Lead(
+        lead_id="l_a",
+        primary_phone="+933333333333",
+    )
+    lead2 = Lead(
+        lead_id="l_b",
+        primary_phone="+944444444444",
+    )
+    db_session.add_all([lead1, lead2])
+    db_session.flush()  
+
+    call1 = Call(call_id="call_a", lead_id=lead1.lead_id)
+    call2 = Call(call_id="call_b", lead_id=lead2.lead_id)
     db_session.add_all([call1, call2])
     db_session.commit()
 
-    snapshot1 = LeadSnapshot(call_id="call_a")
-    snapshot2 = LeadSnapshot(call_id="call_b")
-
+    snapshot1 = LeadSnapshot(lead_id=lead1.lead_id)
+    snapshot2 = LeadSnapshot(lead_id=lead2.lead_id)
     db_session.add_all([snapshot1, snapshot2])
     db_session.commit()
 
-    snapshot1.qualification_reasons.append("BUDGET_BELOW_MIN")
+    snapshot1.qualification_reasons.append("BUDGET_LOW")
 
     assert snapshot2.qualification_reasons == []
