@@ -33,7 +33,20 @@ class CallOrchestrator:
     ) -> str:
         """Handle one user turn and return the assistant reply."""
 
-        # --- Log user input ---
+        # --- FAQ interrupt (no state or snapshot mutation) ---
+        if self.faq.can_handle(text):
+            answer = self.faq.handle(type("Ctx", (), {"text": text}))
+            if answer:
+                db.add(
+                    Event(
+                        call_id=call.call_id,
+                        type=EventType.ASSISTANT_TURN,
+                        payload_json={"text": answer},
+                    )
+                )
+                return answer
+
+        # --- Log user input (non-interrupt path only) ---
         db.add(
             Event(
                 call_id=call.call_id,
@@ -42,22 +55,10 @@ class CallOrchestrator:
             )
         )
 
-        # --- FAQ interrupt (no state mutation) ---
-        if self.faq.can_handle(text):
-            answer = self.faq.handle(type("Ctx", (), {"text": text}))
-            if answer:
-                db.add(
-                    Event(
-                        call_id=call.call_id,
-                        type=EventType.ASSISTANT_TURN,
-                        payload={"text": answer},
-                    )
-                )
-                return answer
-
         # --- Apply qualification skill ---
         current_state = CallState(call.current_state)
-        snapshot = self.qualification.apply(current_state, text, snapshot)
+        self.qualification.apply(current_state, text, snapshot)
+        db.add(snapshot)
 
         # --- Derive snapshot signals ---
         has_timeline = snapshot.timeline_bucket not in {None, "unknown"}

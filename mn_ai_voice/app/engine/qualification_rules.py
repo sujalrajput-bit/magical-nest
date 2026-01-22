@@ -21,17 +21,18 @@ class QualificationService:
         region: str,
         budget_band: str,
     ) -> Tuple[QualificationStatus, List[QualificationReason]]:
-        """Evaluate a lead and return its qualification status and reasons.
+        """Evaluate lead qualification based on region and budget band.
 
         Args:
-            region: Normalized region identifier (e.g. south_india).
-            budget_band: Normalized budget band (e.g. below_6L, 6_to_9L).
+            region: The lead's region (e.g., "south_india", "maharashtra", "delhi_ncr")
+            budget_band: The lead's budget band (e.g., "below_6L", "6L_to_9L", "above_9L")
 
         Returns:
-            A tuple of:
-            - QualificationStatus
-            - List of QualificationReason explaining the decision
+            A tuple of (qualification_status, reasons) where:
+            - qualification_status: QUALIFIED, NURTURE, or UNQUALIFIED
+            - reasons: List of QualificationReason enums explaining the decision
         """
+
         if region not in {"south_india", "maharashtra", "delhi_ncr"}:
             return (
                 QualificationStatus.UNQUALIFIED,

@@ -52,11 +52,15 @@ def test_qualification_status_values():
 
 
 def test_qualification_reason_values():
-    """Verify QualificationReason enum values."""
+    """
+    Verify QualificationReason enum values.
 
-    assert QualificationReason.REGION_NOT_SERVED.value == "REGION_NOT_SERVED"
-    assert QualificationReason.BUDGET_BELOW_MIN.value == "BUDGET_BELOW_MIN"
-    assert QualificationReason.BUDGET_ABOVE_BAND.value == "BUDGET_ABOVE_BAND"
+    Stored as lowercase strings for DB compatibility.
+    """
+
+    assert QualificationReason.REGION_NOT_SERVED.value == "region_not_served"
+    assert QualificationReason.BUDGET_BELOW_MIN.value == "budget_below_min"
+    assert QualificationReason.BUDGET_ABOVE_BAND.value == "budget_above_band"
 
 
 def test_enum_string_comparison():
@@ -64,6 +68,7 @@ def test_enum_string_comparison():
 
     assert CallStatus.IN_PROGRESS == "in_progress"
     assert EventType.CALL_STARTED == "call_started"
+    assert QualificationReason.REGION_NOT_SERVED == "region_not_served"
 
 
 def test_invalid_enum_value_raises_error():
@@ -74,3 +79,6 @@ def test_invalid_enum_value_raises_error():
 
     with pytest.raises(ValueError):
         CallState("INVALID_STATE")
+
+    with pytest.raises(ValueError):
+        QualificationReason("INVALID_REASON")

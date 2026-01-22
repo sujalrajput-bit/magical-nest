@@ -40,6 +40,10 @@ class StateMachine:
             Next CallState
         """
 
+        # --- Guard against invalid input ---
+        if not isinstance(current, CallState):
+            raise ValueError(f"Invalid CallState: {current}")
+
         # --- Mandatory linear flow ---
         if current == CallState.ASK_LANGUAGE:
             return CallState.ASK_CITY_OR_REGION

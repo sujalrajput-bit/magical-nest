@@ -20,10 +20,11 @@ class DummySession:
         self.events = []
 
     def add(self, obj):
+        """Add an object to the events list."""
         self.events.append(obj)
 
     def commit(self):
-        pass
+        """Commit the session (no-op for testing)."""
 
 
 def test_faq_interrupt_does_not_change_state_or_snapshot():
@@ -46,7 +47,8 @@ def test_faq_interrupt_does_not_change_state_or_snapshot():
         current_state=CallState.ASK_BUDGET.value,
     )
 
-    snapshot = LeadSnapshot(call_id="c_test")
+    # Lead-scoped snapshot (correct as per current model)
+    snapshot = LeadSnapshot(lead_id="l_test")
 
     user_text = "What is your process?"
 
@@ -57,11 +59,13 @@ def test_faq_interrupt_does_not_change_state_or_snapshot():
         text=user_text,
     )
 
+    # --- Assertions ---
+
     # FAQ answer returned
     assert reply is not None
     assert "process" in reply.lower()
 
-    # State unchanged
+    # Call state unchanged
     assert call.current_state == CallState.ASK_BUDGET.value
 
     # Snapshot untouched

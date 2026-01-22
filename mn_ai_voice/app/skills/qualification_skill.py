@@ -5,11 +5,10 @@ Applies extraction and qualification rules to update a lead snapshot
 based on user input, independent of strict conversation order.
 """
 
-from typing import Any
-
 from mn_ai_voice.app.engine.extractors import BudgetExtractor, EmailExtractor
 from mn_ai_voice.app.engine.qualification_rules import QualificationService
 from mn_ai_voice.app.core.constants import CallState
+from mn_ai_voice.app.db.models import LeadSnapshot
 
 
 class QualificationSkill:
@@ -20,7 +19,7 @@ class QualificationSkill:
         self.email_extractor = EmailExtractor()
         self.qualifier = QualificationService()
 
-    def apply(self, state: CallState, text: str, snapshot: Any) -> Any:
+    def apply(self, state: CallState, text: str, snapshot: LeadSnapshot) -> LeadSnapshot:
         """
         Apply qualification-related logic based on user input.
 
@@ -31,7 +30,7 @@ class QualificationSkill:
 
         # --- Budget extraction (can happen anytime) ---
         budget_band = self.budget_extractor.extract(text)
-        if budget_band != "unknown":
+        if budget_band and budget_band != "unknown":
             snapshot.budget_band = budget_band
 
         # --- Email extraction (only when asked) ---
@@ -40,9 +39,10 @@ class QualificationSkill:
             if email:
                 snapshot.email = email
 
-        # --- Qualification evaluation (run once when ready) ---
+        # --- Qualification evaluation (run once, at the right time) ---
         if (
-            snapshot.qualification_status in (None, "unknown")
+            state == CallState.QUALIFY
+            and snapshot.qualification_status in (None, "unknown")
             and snapshot.region_value not in (None, "unknown")
             and snapshot.budget_band not in (None, "unknown")
         ):

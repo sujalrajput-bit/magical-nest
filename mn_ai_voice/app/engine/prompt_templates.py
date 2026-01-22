@@ -1,9 +1,11 @@
-"""Prompt templates for conversation flow.
+"""
+Prompt templates for conversation flow.
 
 Maps conversation states to user-facing prompt strings.
 """
 
 from mn_ai_voice.app.core.constants import CallState
+
 
 class PromptRenderer:
     """Renders user prompts based on the current conversation state."""
@@ -21,4 +23,6 @@ class PromptRenderer:
 
     def render(self, state: CallState) -> str:
         """Return the prompt string for the given conversation state."""
+        if state not in self._prompts:
+            raise ValueError(f"No prompt defined for CallState: {state}")
         return self._prompts[state]

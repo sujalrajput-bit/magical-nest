@@ -45,6 +45,6 @@ class QualificationStatus(str, Enum):
 class QualificationReason(str, Enum):
     """Represents reasons a lead may not qualify."""
 
-    REGION_NOT_SERVED = "REGION_NOT_SERVED"
-    BUDGET_BELOW_MIN = "BUDGET_BELOW_MIN"
-    BUDGET_ABOVE_BAND = "BUDGET_ABOVE_BAND"
+    REGION_NOT_SERVED = "region_not_served"
+    BUDGET_BELOW_MIN = "budget_below_min"
+    BUDGET_ABOVE_BAND = "budget_above_band"

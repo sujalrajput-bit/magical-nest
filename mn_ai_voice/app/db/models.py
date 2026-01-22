@@ -22,7 +22,10 @@ from sqlalchemy import (
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy ORM models."""
 
-# Lead Identity (NEW)
+
+# =========================
+# Lead Identity
+# =========================
 
 class Lead(Base):
     """
@@ -30,6 +33,7 @@ class Lead(Base):
 
     A lead may have multiple calls over time.
     """
+
     __tablename__ = "leads"
 
     lead_id = Column(String, primary_key=True)
@@ -43,7 +47,10 @@ class Lead(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
+
+# =========================
 # Call Session
+# =========================
 
 class Call(Base):
     """Represents a phone call session."""
@@ -54,41 +61,57 @@ class Call(Base):
     lead_id = Column(String, ForeignKey("leads.lead_id"), nullable=True)
 
     from_phone = Column(String)
-    status = Column(String)              # in_progress / ended / failed
-    current_state = Column(String)
+    direction = Column(String, nullable=False, default="inbound")
+    language_pref = Column(String, nullable=True)
+
+    status = Column(String)        # CallStatus enum value
+    current_state = Column(String) # CallState enum value
 
     started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     ended_at = Column(DateTime, nullable=True)
 
     source = Column(String)
 
+
+# =========================
 # Event Ledger (Immutable)
+# =========================
 
 class Event(Base):
-    """Immutable event log for a call."""
+    """
+    Immutable event log for a call.
+
+    No idempotency — every event is recorded.
+    """
 
     __tablename__ = "events"
 
     event_id = Column(Integer, primary_key=True)
     call_id = Column(String, ForeignKey("calls.call_id"), nullable=False)
 
-    type = Column(String)                 # call_started, user_turn, etc
-    payload = Column(JSON)
+    type = Column(String)  # EventType enum value
+    payload_json = Column(JSON)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+
+# =========================
 # Lead Snapshot (Identity-level memory)
+# =========================
 
 class LeadSnapshot(Base):
     """
-    Stores the latest known state of a lead.
-
-    This persists across multiple calls.
+    Mutable snapshot of extracted information
+    for a single lead identity.
     """
 
     __tablename__ = "lead_snapshot"
 
-    lead_id = Column(String, ForeignKey("leads.lead_id"), primary_key=True)
+    lead_id = Column(
+        String,
+        ForeignKey("leads.lead_id"),
+        primary_key=True,
+    )
 
     language = Column(String, default="unknown")
     city_text = Column(String, nullable=True)
@@ -103,7 +126,7 @@ class LeadSnapshot(Base):
     email = Column(String, nullable=True)
 
     qualification_status = Column(String, default="unknown")
-    qualification_reasons = Column(JSON, default=lambda: [])
+    qualification_reasons = Column(JSON, default=list, nullable=False)
 
     updated_at = Column(
         DateTime,
@@ -111,7 +134,10 @@ class LeadSnapshot(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
+
+# =========================
 # Artifacts
+# =========================
 
 class Artifact(Base):
     """
@@ -123,14 +149,17 @@ class Artifact(Base):
     artifact_id = Column(Integer, primary_key=True)
     call_id = Column(String, ForeignKey("calls.call_id"), nullable=False)
 
-    type = Column(String)                 # summary / extracted_fields
+    type = Column(String)  # summary / extracted_fields
     content_text = Column(String, nullable=True)
     content_json = Column(JSON, nullable=True)
 
     version = Column(Integer, default=1)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+
+# =========================
 # CRM Outbox (Idempotent)
+# =========================
 
 class CRMOutbox(Base):
     """
@@ -144,12 +173,12 @@ class CRMOutbox(Base):
     outbox_id = Column(Integer, primary_key=True)
     call_id = Column(String, ForeignKey("calls.call_id"), nullable=False)
 
-    action = Column(String)               # upsert_lead / set_stage / append_note
-    payload = Column(JSON)
+    action = Column(String)  # upsert_lead / set_stage / append_note
+    payload_json = Column(JSON)
 
     idempotency_key = Column(String, unique=True, nullable=False)
 
-    status = Column(String, default="pending")   # pending / success / failed
+    status = Column(String, default="pending")  # pending / success / failed
     attempts = Column(Integer, default=0)
     last_error = Column(String, nullable=True)
 
