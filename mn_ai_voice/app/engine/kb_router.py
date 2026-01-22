@@ -1,4 +1,5 @@
-"""Knowledge base routing logic.
+"""
+Knowledge base routing logic.
 
 Routes user input to predefined knowledge base responses
 using simple keyword-based matching.
@@ -21,7 +22,13 @@ class KBRouter:
             otherwise None.
         """
         normalized = text.lower()
-        if "process" in normalized:
-            return KNOWLEDGE_BASE["faq"]["process"]
+
+        faq_entries = KNOWLEDGE_BASE.get("faq", {})
+        if not faq_entries:
+            return None
+
+        for keyword, answer in faq_entries.items():
+            if keyword in normalized:
+                return answer
 
         return None
