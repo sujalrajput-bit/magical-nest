@@ -7,7 +7,7 @@ the active conversation state or snapshot.
 
 from mn_ai_voice.app.orchestrator.call_orchestrator import CallOrchestrator
 from mn_ai_voice.app.core.constants import CallState
-from mn_ai_voice.app.db.models import Call, Lead, LeadSnapshot
+from mn_ai_voice.app.db.models import Call, LeadSnapshot
 
 
 class DummySession:
@@ -20,11 +20,10 @@ class DummySession:
         self.events = []
 
     def add(self, obj):
-        """Add an object to the events list."""
         self.events.append(obj)
 
     def commit(self):
-        """Commit the session (no-op for testing)."""
+        pass
 
 
 def test_faq_interrupt_does_not_change_state_or_snapshot():
@@ -40,21 +39,14 @@ def test_faq_interrupt_does_not_change_state_or_snapshot():
     orchestrator = CallOrchestrator()
     db = DummySession()
 
-    # --- Identity setup (REQUIRED now) ---
-    lead = Lead(
-        lead_id="l_test",
-        primary_phone="+911234567890",
-    )
-
-    snapshot = LeadSnapshot(lead_id=lead.lead_id)
-
     call = Call(
         call_id="c_test",
-        lead_id=lead.lead_id,
         from_phone="+911234567890",
         status="in_progress",
         current_state=CallState.ASK_BUDGET.value,
     )
+
+    snapshot = LeadSnapshot(call_id="c_test")
 
     user_text = "What is your process?"
 
@@ -64,8 +56,6 @@ def test_faq_interrupt_does_not_change_state_or_snapshot():
         snapshot=snapshot,
         text=user_text,
     )
-
-    # --- Assertions ---
 
     # FAQ answer returned
     assert reply is not None
